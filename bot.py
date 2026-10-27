@@ -1,35 +1,29 @@
 import os
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+import telebot
 
-# Logging setup
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-# Your Admin Telegram User ID
+TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = os.environ.get("ADMIN_ID")
 
-async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+bot = telebot.TeleBot(TOKEN)
+
+@bot.message_handler(content_types=['document', 'photo', 'video', 'audio'])
+def handle_files(message):
+    user_id = message.from_user.id
     
-    # Security check to ensure only you use your bot
+    # സെക്യൂരിറ്റി ചെക്ക്
     if ADMIN_ID and str(user_id) != str(ADMIN_ID):
-        await update.message.reply_text("Unauthorized access!")
+        bot.reply_to(message, "Unauthorized access!")
         return
 
-    # Check for files, photos or videos
-    file = update.message.document or update.message.photo or update.message.video
-    if file:
-        await update.message.reply_text("📂 File received and stored securely in your private cloud!")
+    bot.reply_to(message, "📂 File received and stored securely in your private cloud!")
+
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    user_id = message.from_user.id
+    if ADMIN_ID and str(user_id) != str(ADMIN_ID):
+        return
+    bot.reply_to(message, "Send me any file, photo, or video to store.")
 
 if __name__ == '__main__':
-    TOKEN = os.environ.get("BOT_TOKEN")
-    
-    # Build application
-    app = ApplicationBuilder().token(TOKEN).build()
-    
-    # Add message handler
-    app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_file))
-    
     print("Bot is running...")
-    app.run_polling()
+    bot.infinity_polling()
